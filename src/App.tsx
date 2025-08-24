@@ -30,11 +30,11 @@ function App() {
     setIsRuleSelectorOpen(true);
   };
 
-  const handleRuleSelect = (rule: TransformationRule, direction: 'left-to-right' | 'right-to-left', _position: number[]) => {
+  const handleRuleSelect = (rule: TransformationRule, direction: 'left-to-right' | 'right-to-left', position: number[]) => {
     if (!currentExpression) return;
 
   
-    const result = ruleEngine.applyRule(currentExpression, rule, direction);
+    const result = ruleEngine.applyRule(currentExpression, rule, direction, position);
     
     if (result) {
       const newStep: TransformationStep = {

@@ -858,7 +858,7 @@ export class RuleEngine {
     }
   }
 
-  applyRule(expression: BooleanExpression, rule: TransformationRule, direction: 'left-to-right' | 'right-to-left' = 'left-to-right'): BooleanExpression | null {
+  applyRule(expression: BooleanExpression, rule: TransformationRule, direction: 'left-to-right' | 'right-to-left' = 'left-to-right', position?: number[]): BooleanExpression | null {
     try {
       let pattern: BooleanExpression;
       let replacement: BooleanExpression;
@@ -871,10 +871,27 @@ export class RuleEngine {
         replacement = parseBooleanExpression(rule.leftPattern);
       }
 
-      // Find where the pattern matches in the expression
-      const matchInfo = this.findMatchWithPosition(expression, pattern);
-      if (!matchInfo) {
-        return null;
+      let matchInfo: { substitution: Map<string, BooleanExpression>, path: number[] } | null;
+
+      if (position !== undefined) {
+        // Apply rule at specific position
+        const subexpr = this.getSubexpressionAtPosition(expression, position);
+        if (!subexpr) {
+          return null;
+        }
+        
+        const substitution = this.unify(subexpr, pattern);
+        if (!substitution) {
+          return null;
+        }
+        
+        matchInfo = { substitution, path: position };
+      } else {
+        // Find where the pattern matches in the expression (original behavior)
+        matchInfo = this.findMatchWithPosition(expression, pattern);
+        if (!matchInfo) {
+          return null;
+        }
       }
 
       // Apply the substitution to the replacement
@@ -927,6 +944,29 @@ export class RuleEngine {
       }
     }
     
+    return null;
+  }
+
+  private getSubexpressionAtPosition(expression: BooleanExpression, position: number[]): BooleanExpression | null {
+    if (position.length === 0) {
+      return expression;
+    }
+
+    const currentPos = position[0];
+    const remainingPos = position.slice(1);
+
+    if (expression.type === 'unary') {
+      if (currentPos === 0) {
+        return this.getSubexpressionAtPosition(expression.operand, remainingPos);
+      }
+    } else if (expression.type === 'binary') {
+      if (currentPos === 0) {
+        return this.getSubexpressionAtPosition(expression.left, remainingPos);
+      } else if (currentPos === 1) {
+        return this.getSubexpressionAtPosition(expression.right, remainingPos);
+      }
+    }
+
     return null;
   }
 
