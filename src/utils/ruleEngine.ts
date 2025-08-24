@@ -639,13 +639,12 @@ export class RuleEngine {
     }
     
     if (subexpr.type === 'unary') {
-      // Unary expressions (like ¬a) have higher precedence than binary operators
-      // So they don't need parentheses unless they're complex
+      // Unary expressions need parentheses only when their operand is binary
+      // ¬a doesn't need parentheses, but ¬(a ∧ b) does
       if (subexpr.operand.type === 'binary') {
-        // If the operand is binary, we need parentheses: ¬(a ∧ b)
         return true;
       }
-      return false; // ¬a doesn't need parentheses
+      return false;
     }
     
     if (subexpr.type === 'binary') {

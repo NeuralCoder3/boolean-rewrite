@@ -20,7 +20,7 @@ describe('Full Expression Preview', () => {
     )
     
     expect(commutativityOr).toBeDefined()
-    expect(commutativityOr!.fullPreview).toBe('a ∧ ((¬a) ∨ b)')
+    expect(commutativityOr!.fullPreview).toBe('a ∧ (¬a ∨ b)')
     
     // Test double negation at subexpression position [1, 1] (¬a)
     const doubleNegation = applications.find(app => 
@@ -30,7 +30,7 @@ describe('Full Expression Preview', () => {
     )
     
     expect(doubleNegation).toBeDefined()
-    expect(doubleNegation!.fullPreview).toBe('a ∧ (b ∨ (¬¬¬a))')
+    expect(doubleNegation!.fullPreview).toBe('a ∧ (b ∨ ¬¬¬a)')
   })
 
   it('should generate correct full expression previews for full expression transformations', () => {
@@ -50,7 +50,7 @@ describe('Full Expression Preview', () => {
     )
     
     expect(distributivity).toBeDefined()
-    expect(distributivity!.fullPreview).toBe('(a ∧ b) ∨ (a ∧ (¬a))')
+    expect(distributivity!.fullPreview).toBe('(a ∧ b) ∨ (a ∧ ¬a)')
     
     // Test commutativity AND at position [] (entire expression)
     const commutativityAnd = applications.find(app => 
@@ -60,7 +60,7 @@ describe('Full Expression Preview', () => {
     )
     
     expect(commutativityAnd).toBeDefined()
-    expect(commutativityAnd!.fullPreview).toBe('(b ∨ (¬a)) ∧ a')
+    expect(commutativityAnd!.fullPreview).toBe('(b ∨ ¬a) ∧ a')
   })
 
   it('should handle complex nested transformations correctly', () => {

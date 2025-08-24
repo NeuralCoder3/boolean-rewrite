@@ -55,6 +55,29 @@ function App() {
     console.log('Rule clicked:', rule);
   };
 
+  const undoToStep = (stepIndex: number) => {
+    if (stepIndex < 0 || stepIndex >= transformationSteps.length) return;
+    
+    const targetStep = transformationSteps[stepIndex];
+    setCurrentExpression(targetStep.to);
+    setTransformationSteps(transformationSteps.slice(0, stepIndex + 1));
+  };
+
+  const undoLastStep = () => {
+    if (transformationSteps.length === 0) return;
+    
+    if (transformationSteps.length === 1) {
+      // If only one step, go back to the original expression
+      setCurrentExpression(transformationSteps[0].from);
+      setTransformationSteps([]);
+    } else {
+      // Go back to the previous step
+      const previousStep = transformationSteps[transformationSteps.length - 2];
+      setCurrentExpression(previousStep.to);
+      setTransformationSteps(transformationSteps.slice(0, transformationSteps.length - 1));
+    }
+  };
+
   const resetTransformation = () => {
     if (transformationSteps.length > 0) {
       setCurrentExpression(transformationSteps[0].from);
@@ -139,7 +162,14 @@ function App() {
             </div>
             
             {transformationSteps.length > 0 && (
-              <div className="mt-4">
+              <div className="mt-4 flex gap-3 justify-center">
+                <button
+                  onClick={undoLastStep}
+                  disabled={transformationSteps.length === 0}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 text-base shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  Undo Last Step
+                </button>
                 <button
                   onClick={resetTransformation}
                   className="px-5 py-2 bg-gray-600 hover:bg-gray-700 dark:bg-gray-500 dark:hover:bg-gray-600 text-white font-semibold rounded-xl transition-all duration-200 text-base shadow-lg hover:shadow-xl transform hover:scale-105"
@@ -158,6 +188,7 @@ function App() {
               steps={transformationSteps}
               currentExpression={currentExpression}
               onRuleClick={handleRuleClick}
+              onUndoToStep={undoToStep}
             />
           </div>
         )}

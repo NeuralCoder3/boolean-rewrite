@@ -7,12 +7,14 @@ interface TransformationChainProps {
   steps: TransformationStepType[];
   currentExpression: BooleanExpression;
   onRuleClick?: (rule: TransformationStepType['rule']) => void;
+  onUndoToStep?: (stepIndex: number) => void;
 }
 
 export const TransformationChain: React.FC<TransformationChainProps> = ({
   steps,
   currentExpression,
-  onRuleClick
+  onRuleClick,
+  onUndoToStep
 }) => {
   if (steps.length === 0) {
     return null;
@@ -45,6 +47,19 @@ export const TransformationChain: React.FC<TransformationChainProps> = ({
               step={step} 
               onRuleClick={() => onRuleClick?.(step.rule)}
             />
+            
+            {/* Undo Button */}
+            {onUndoToStep && (
+              <div className="absolute -right-6 top-1/2 transform -translate-y-1/2">
+                <button
+                  onClick={() => onUndoToStep(index)}
+                  className="w-10 h-10 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors duration-200 shadow-lg hover:shadow-xl"
+                  title={`Undo to step ${index + 1}`}
+                >
+                  ↶
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>

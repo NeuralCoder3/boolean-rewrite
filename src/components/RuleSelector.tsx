@@ -17,14 +17,9 @@ export const RuleSelector: React.FC<RuleSelectorProps> = ({ expression, onRuleSe
   const allRules = ruleEngine.getRules();
   const allApplications = ruleEngine.getAllPossibleApplications(expression);
   
-  // Get unique categories
+    // Get unique categories
   const categories = ['all', ...Array.from(new Set(allRules.map(rule => rule.category)))];
   
-  // Filter rules by category
-  const filteredRules = selectedCategory === 'all' 
-    ? allRules
-    : allRules.filter(rule => rule.category === selectedCategory);
-
   // Group applications by rule
   const applicationsByRule = new Map<string, Array<{
     direction: 'left-to-right' | 'right-to-left';
@@ -180,62 +175,95 @@ export const RuleSelector: React.FC<RuleSelectorProps> = ({ expression, onRuleSe
               </div>
             </div>
           ) : (
-            <div className="grid gap-4">
-              {filteredRules.map(rule => {
-                const status = getRuleStatus(rule);
-                const applications = applicationsByRule.get(rule.id);
+            <div className="space-y-6">
+              {/* Group rules by category and add separators */}
+              {categories.filter(cat => cat !== 'all').map(category => {
+                // If a specific category is selected, only show that category
+                if (selectedCategory !== 'all' && selectedCategory !== category) {
+                  return null;
+                }
+                
+                const categoryRules = allRules.filter(rule => rule.category === category);
+                
+                // Always show categories when "All Rules" is selected
+                // Only filter by applicability when a specific category is selected
+                if (selectedCategory !== 'all' && categoryRules.length === 0) {
+                  return null;
+                }
                 
                 return (
-                  <div
-                    key={rule.id}
-                    className={`p-4 rounded-xl border transition-all duration-200 ${
-                      status === 'disabled' 
-                        ? 'border-gray-200 dark:border-gray-700' 
-                        : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-lg">{getStatusIcon(status)}</span>
-                          <h3 className={`font-semibold ${status === 'disabled' ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>
-                            {rule.name}
-                          </h3>
-                          {applications && applications.length > 1 && (
-                            <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full dark:bg-green-900/30 dark:text-green-200">
-                              {applications.length} options
-                            </span>
-                          )}
-                        </div>
+                  <div key={category} className="space-y-4">
+                    {/* Category Header */}
+                    {selectedCategory === 'all' && (
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent"></div>
+                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                        {category.charAt(0).toUpperCase() + category.slice(1)} Rules
+                      </h3>
+                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent"></div>
+                    </div>)}
+                    
+                    {/* Rules in this category */}
+                    <div className="grid gap-4">
+                      {categoryRules.map(rule => {
+                        const status = getRuleStatus(rule);
+                        const applications = applicationsByRule.get(rule.id);
                         
-                        <p className={`text-sm mb-2 ${status === 'disabled' ? 'text-gray-400' : 'text-gray-600 dark:text-gray-300'}`}>
-                          {rule.description}
-                        </p>
-                        
-                        <div className="flex flex-wrap gap-2 text-xs">
-                          <span className={`px-2 py-1 rounded ${
-                            status === 'disabled' 
-                              ? 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600' 
-                              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200'
-                          }`}>
-                            {rule.category}
-                          </span>
-                          {applications && applications.length > 0 && (
-                            <span className="bg-green-100 text-green-700 px-2 py-1 rounded dark:bg-green-900/30 dark:text-green-200">
-                              Applicable
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {status !== 'disabled' && (
-                        <button
-                          onClick={() => handleRuleClick(rule)}
-                          className="ml-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {applications && applications.length > 1 ? 'Choose...' : 'Apply'}
-                        </button>
-                      )}
+                        return (
+                          <div
+                            key={rule.id}
+                            className={`p-4 rounded-xl border transition-all duration-200 ${
+                              status === 'disabled' 
+                                ? 'border-gray-200 dark:border-gray-700' 
+                                : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-lg">{getStatusIcon(status)}</span>
+                                  <h3 className={`font-semibold ${status === 'disabled' ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>
+                                    {rule.name}
+                                  </h3>
+                                  {applications && applications.length > 1 && (
+                                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full dark:bg-green-900/30 dark:text-green-200">
+                                      {applications.length} options
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                <p className={`text-sm mb-2 ${status === 'disabled' ? 'text-gray-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                                  {rule.description}
+                                </p>
+                                
+                                <div className="flex flex-wrap gap-2 text-xs">
+                                  <span className={`px-2 py-1 rounded ${
+                                    status === 'disabled' 
+                                      ? 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600' 
+                                      : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200'
+                                  }`}>
+                                    {rule.category}
+                                  </span>
+                                  {applications && applications.length > 0 && (
+                                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded dark:bg-green-900/30 dark:text-green-200">
+                                      Applicable
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {status !== 'disabled' && (
+                                <button
+                                  onClick={() => handleRuleClick(rule)}
+                                  className="ml-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {applications && applications.length > 1 ? 'Choose...' : 'Apply'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
