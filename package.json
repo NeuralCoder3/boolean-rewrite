@@ -2,7 +2,7 @@
   "name": "boolean-transformer",
   "private": true,
   "version": "0.0.0",
-  "homepage": "https://https://neuralcoder3.github.io/boolean-rewrite",
+  "homepage": "https://neuralcoder3.github.io/boolean-rewrite",
   "type": "module",
   "scripts": {
     "dev": "vite",
