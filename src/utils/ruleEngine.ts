@@ -605,6 +605,9 @@ export class RuleEngine {
       case 'variable':
         return expr.value;
       case 'constant':
+        // Convert ASCII constants to Unicode for display
+        if (expr.value === 'true') return '⊤';
+        if (expr.value === 'false') return '⊥';
         return expr.value;
       case 'unary': {
         // For unary expressions, we need to check if the operand needs parentheses
@@ -858,7 +861,13 @@ export class RuleEngine {
     }
   }
 
-  applyRule(expression: BooleanExpression, rule: TransformationRule, direction: 'left-to-right' | 'right-to-left' = 'left-to-right', position?: number[]): BooleanExpression | null {
+  applyRule(
+    expression: BooleanExpression, 
+    rule: TransformationRule, 
+    direction: 'left-to-right' | 'right-to-left' = 'left-to-right', 
+    position?: number[],
+    variableInstantiations?: Map<string, BooleanExpression>
+  ): BooleanExpression | null {
     try {
       let pattern: BooleanExpression;
       let replacement: BooleanExpression;
@@ -894,8 +903,16 @@ export class RuleEngine {
         }
       }
 
+      // Merge the unification substitution with any provided variable instantiations
+      const finalSubstitution = new Map(matchInfo.substitution);
+      if (variableInstantiations) {
+        for (const [varName, instantiation] of variableInstantiations) {
+          finalSubstitution.set(varName, instantiation);
+        }
+      }
+
       // Apply the substitution to the replacement
-      const substitutedReplacement = this.applySubstitutionToExpression(replacement, matchInfo.substitution);
+      const substitutedReplacement = this.applySubstitutionToExpression(replacement, finalSubstitution);
       
       // Replace the matched part with the substituted replacement
       return this.replaceSubexpression(expression, matchInfo.path, substitutedReplacement);
@@ -968,6 +985,76 @@ export class RuleEngine {
     }
 
     return null;
+  }
+
+  /**
+   * Detects if a rule introduces new variables that need instantiation
+   * Returns a map of variable names to their types (greek for unicode, ?a-z for ascii)
+   */
+  detectNewVariables(rule: TransformationRule, direction: 'left-to-right' | 'right-to-left'): Map<string, string> {
+    const newVars = new Map<string, string>();
+    
+    let pattern: BooleanExpression;
+    let replacement: BooleanExpression;
+    
+    if (direction === 'left-to-right') {
+      pattern = parseBooleanExpression(rule.leftPattern);
+      replacement = parseBooleanExpression(rule.rightPattern);
+    } else {
+      pattern = parseBooleanExpression(rule.rightPattern);
+      replacement = parseBooleanExpression(rule.leftPattern);
+    }
+    
+    // Find all variables in the replacement
+    const replacementVars = this.extractVariables(replacement);
+    
+    // Find all variables in the pattern
+    const patternVars = this.extractVariables(pattern);
+    
+    // Variables that appear in replacement but not in pattern are new
+    for (const [varName, varType] of replacementVars) {
+      if (!patternVars.has(varName)) {
+        newVars.set(varName, varType);
+      }
+    }
+    
+    return newVars;
+  }
+
+  /**
+   * Extracts all variables from an expression with their types
+   */
+  private extractVariables(expr: BooleanExpression): Map<string, string> {
+    const vars = new Map<string, string>();
+    
+    switch (expr.type) {
+      case 'variable':
+        if (/^[α-ωΑ-Ω]/.test(expr.value)) {
+          vars.set(expr.value, 'greek');
+        } else if (/^\?[a-z]$/.test(expr.value)) {
+          vars.set(expr.value, 'ascii');
+        } else if (/^[A-Z]$/.test(expr.value)) {
+          // Capital letters are used in rule patterns
+          vars.set(expr.value, 'pattern');
+        }
+        break;
+      case 'unary':
+        this.extractVariablesFromMap(expr.operand, vars);
+        break;
+      case 'binary':
+        this.extractVariablesFromMap(expr.left, vars);
+        this.extractVariablesFromMap(expr.right, vars);
+        break;
+    }
+    
+    return vars;
+  }
+
+  private extractVariablesFromMap(expr: BooleanExpression, vars: Map<string, string>): void {
+    const subVars = this.extractVariables(expr);
+    for (const [varName, varType] of subVars) {
+      vars.set(varName, varType);
+    }
   }
 
   private replaceSubexpression(expression: BooleanExpression, path: number[], replacement: BooleanExpression): BooleanExpression {

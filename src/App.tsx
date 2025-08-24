@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ExpressionInput } from './components/ExpressionInput';
 import { TransformationChain } from './components/TransformationChain';
 import { RuleSelector } from './components/RuleSelector';
+import { VariableInstantiationModal } from './components/VariableInstantiationModal';
 import type { BooleanExpression, TransformationStep, TransformationRule } from './types/boolean';
 import { RuleEngine } from './utils/ruleEngine';
 import { renderExpression } from './utils/expressionRenderer';
@@ -13,6 +14,12 @@ function App() {
   const [isRuleSelectorOpen, setIsRuleSelectorOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ruleEngine] = useState(() => new RuleEngine());
+  const [isVariableModalOpen, setIsVariableModalOpen] = useState(false);
+  const [pendingRuleApplication, setPendingRuleApplication] = useState<{
+    rule: TransformationRule;
+    direction: 'left-to-right' | 'right-to-left';
+    position: number[];
+  } | null>(null);
   const { isDark, toggleTheme } = useTheme();
 
   const handleExpressionSubmit = (expression: BooleanExpression) => {
@@ -33,8 +40,23 @@ function App() {
   const handleRuleSelect = (rule: TransformationRule, direction: 'left-to-right' | 'right-to-left', position: number[]) => {
     if (!currentExpression) return;
 
-  
-    const result = ruleEngine.applyRule(currentExpression, rule, direction, position);
+    // Check if the rule introduces new variables
+    const newVariables = ruleEngine.detectNewVariables(rule, direction);
+    
+    if (newVariables.size > 0) {
+      // Store the pending rule application and show variable instantiation modal
+      setPendingRuleApplication({ rule, direction, position });
+      setIsVariableModalOpen(true);
+    } else {
+      // No new variables, apply the rule directly
+      applyRule(rule, direction, position);
+    }
+  };
+
+  const applyRule = (rule: TransformationRule, direction: 'left-to-right' | 'right-to-left', position: number[], variableInstantiations?: Map<string, BooleanExpression>) => {
+    if (!currentExpression) return;
+
+    const result = ruleEngine.applyRule(currentExpression, rule, direction, position, variableInstantiations);
     
     if (result) {
       const newStep: TransformationStep = {
@@ -47,6 +69,13 @@ function App() {
 
       setTransformationSteps(prev => [...prev, newStep]);
       setCurrentExpression(result);
+    }
+  };
+
+  const handleVariableInstantiation = (instantiations: Map<string, BooleanExpression>) => {
+    if (pendingRuleApplication) {
+      applyRule(pendingRuleApplication.rule, pendingRuleApplication.direction, pendingRuleApplication.position, instantiations);
+      setPendingRuleApplication(null);
     }
   };
 
@@ -199,6 +228,20 @@ function App() {
             expression={currentExpression}
             onRuleSelect={handleRuleSelect}
             onClose={() => setIsRuleSelectorOpen(false)}
+          />
+        )}
+
+        {/* Variable Instantiation Modal */}
+        {isVariableModalOpen && pendingRuleApplication && (
+          <VariableInstantiationModal
+            isOpen={isVariableModalOpen}
+            onClose={() => {
+              setIsVariableModalOpen(false);
+              setPendingRuleApplication(null);
+            }}
+            onConfirm={handleVariableInstantiation}
+            newVariables={ruleEngine.detectNewVariables(pendingRuleApplication.rule, pendingRuleApplication.direction)}
+            ruleName={pendingRuleApplication.rule.name}
           />
         )}
       </div>
