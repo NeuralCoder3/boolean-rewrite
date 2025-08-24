@@ -12,6 +12,7 @@ export const RuleSelector: React.FC<RuleSelectorProps> = ({ expression, onRuleSe
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedRule, setSelectedRule] = useState<TransformationRule | null>(null);
   const [showApplications, setShowApplications] = useState(false);
+  const [hideNonApplicable, setHideNonApplicable] = useState(false);
   
   const ruleEngine = new RuleEngine();
   const allRules = ruleEngine.getRules();
@@ -113,6 +114,23 @@ export const RuleSelector: React.FC<RuleSelectorProps> = ({ expression, onRuleSe
               </button>
             ))}
           </div>
+          
+          {/* Hide Non-Applicable Rules Checkbox */}
+          <div className="mt-4 flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="hideNonApplicable"
+              checked={hideNonApplicable}
+              onChange={(e) => setHideNonApplicable(e.target.checked)}
+              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <label
+              htmlFor="hideNonApplicable"
+              className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+            >
+              Hide non-applicable rules
+            </label>
+          </div>
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[60vh]">
@@ -183,7 +201,15 @@ export const RuleSelector: React.FC<RuleSelectorProps> = ({ expression, onRuleSe
                   return null;
                 }
                 
-                const categoryRules = allRules.filter(rule => rule.category === category);
+                let categoryRules = allRules.filter(rule => rule.category === category);
+                
+                // Filter out non-applicable rules if checkbox is checked
+                if (hideNonApplicable) {
+                  categoryRules = categoryRules.filter(rule => {
+                    const applications = applicationsByRule.get(rule.id);
+                    return applications && applications.length > 0;
+                  });
+                }
                 
                 // Always show categories when "All Rules" is selected
                 // Only filter by applicability when a specific category is selected

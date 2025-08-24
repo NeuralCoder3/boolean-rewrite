@@ -108,14 +108,10 @@ function App() {
   };
 
   const resetTransformation = () => {
-    if (transformationSteps.length > 0) {
-      setCurrentExpression(transformationSteps[0].from);
-      setTransformationSteps([]);
-      setError(null);
-    } else {
-      setCurrentExpression(null);
-      setTransformationSteps([]);
-    }
+    // Always go back to input mode, regardless of transformation steps
+    setCurrentExpression(null);
+    setTransformationSteps([]);
+    setError(null);
   };
 
 
@@ -190,8 +186,8 @@ function App() {
               Click the ≡ button to apply a transformation rule
             </div>
             
-            {transformationSteps.length > 0 && (
-              <div className="mt-4 flex gap-3 justify-center">
+            <div className="mt-4 flex gap-3 justify-center">
+              {transformationSteps.length > 0 && (
                 <button
                   onClick={undoLastStep}
                   disabled={transformationSteps.length === 0}
@@ -199,14 +195,14 @@ function App() {
                 >
                   Undo Last Step
                 </button>
-                <button
-                  onClick={resetTransformation}
-                  className="px-5 py-2 bg-gray-600 hover:bg-gray-700 dark:bg-gray-500 dark:hover:bg-gray-600 text-white font-semibold rounded-xl transition-all duration-200 text-base shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  Reset
-                </button>
-              </div>
-            )}
+              )}
+              <button
+                onClick={resetTransformation}
+                className="px-5 py-2 bg-gray-600 hover:bg-gray-700 dark:bg-gray-500 dark:hover:bg-gray-600 text-white font-semibold rounded-xl transition-all duration-200 text-base shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                New Expression
+              </button>
+            </div>
           </div>
         )}
 
