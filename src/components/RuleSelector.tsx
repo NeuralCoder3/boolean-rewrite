@@ -30,6 +30,7 @@ export const RuleSelector: React.FC<RuleSelectorProps> = ({ expression, onRuleSe
     direction: 'left-to-right' | 'right-to-left';
     position: number[];
     description: string;
+    fullPreview: string; // Added for full expression preview
   }>>();
 
   for (const app of allApplications) {
@@ -39,7 +40,8 @@ export const RuleSelector: React.FC<RuleSelectorProps> = ({ expression, onRuleSe
     applicationsByRule.get(app.rule.id)!.push({
       direction: app.direction,
       position: app.position,
-      description: app.description
+      description: app.description,
+      fullPreview: app.fullPreview // Store full preview
     });
   }
 
@@ -163,6 +165,15 @@ export const RuleSelector: React.FC<RuleSelectorProps> = ({ expression, onRuleSe
                           Position: {app.position.join(' → ')}
                         </div>
                       )}
+                      {/* Full expression preview */}
+                      <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                          Full expression after transformation:
+                        </div>
+                        <div className="font-mono text-sm text-gray-700 dark:text-gray-300">
+                          {app.fullPreview}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

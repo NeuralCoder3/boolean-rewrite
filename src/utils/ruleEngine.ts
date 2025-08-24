@@ -347,12 +347,14 @@ export class RuleEngine {
     direction: 'left-to-right' | 'right-to-left';
     position: number[];
     description: string;
+    fullPreview: string;
   }> {
     const applications: Array<{
       rule: TransformationRule;
       direction: 'left-to-right' | 'right-to-left';
       position: number[];
       description: string;
+      fullPreview: string;
     }> = [];
 
     for (const rule of this.rules) {
@@ -366,11 +368,19 @@ export class RuleEngine {
           match.substitution,
           'left-to-right'
         );
+        const fullPreview = this.generateFullExpressionPreview(
+          expression,
+          rule,
+          'left-to-right',
+          match.path,
+          match.substitution
+        );
         applications.push({
           rule,
           direction: 'left-to-right',
           position: match.path,
-          description: substitutedDescription
+          description: substitutedDescription,
+          fullPreview
         });
       }
 
@@ -384,16 +394,55 @@ export class RuleEngine {
           match.substitution,
           'right-to-left'
         );
+        const fullPreview = this.generateFullExpressionPreview(
+          expression,
+          rule,
+          'right-to-left',
+          match.path,
+          match.substitution
+        );
         applications.push({
           rule,
           direction: 'right-to-left',
           position: match.path,
-          description: substitutedDescription
+          description: substitutedDescription,
+          fullPreview
         });
       }
     }
 
-    return applications;
+    // Deduplicate applications based on rule, direction, position, and description
+    return this.deduplicateApplications(applications);
+  }
+
+  private deduplicateApplications(applications: Array<{
+    rule: TransformationRule;
+    direction: 'left-to-right' | 'right-to-left';
+    position: number[];
+    description: string;
+    fullPreview: string;
+  }>): Array<{
+    rule: TransformationRule;
+    direction: 'left-to-right' | 'right-to-left';
+    position: number[];
+    description: string;
+    fullPreview: string;
+  }> {
+    const seen = new Set<string>();
+    const unique: Array<typeof applications[0]> = [];
+    
+    for (const app of applications) {
+      // Create a unique key that includes position to distinguish different applications
+      // Only deduplicate if rule, direction, position, AND result are identical
+      const key = `${app.rule.id}:${app.direction}:${app.position.join(',')}:${app.fullPreview}`;
+      
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(app);
+      }
+    }
+    
+    return unique;
   }
 
   private generateSubstitutedDescription(
@@ -402,21 +451,153 @@ export class RuleEngine {
     substitution: Map<string, BooleanExpression>,
     direction: 'left-to-right' | 'right-to-left'
   ): string {
-    let substitutedFrom = fromPattern;
-    let substitutedTo = toPattern;
+    // Parse the patterns to get proper expression structure
+    const fromExpr = parseBooleanExpression(fromPattern);
+    const toExpr = parseBooleanExpression(toPattern);
     
-    // Apply substitutions to both patterns
-    for (const [variable, value] of substitution) {
-      const valueStr = this.expressionToString(value);
-      substitutedFrom = substitutedFrom.replace(new RegExp(`\\b${variable}\\b`, 'g'), valueStr);
-      substitutedTo = substitutedTo.replace(new RegExp(`\\b${variable}\\b`, 'g'), valueStr);
-    }
+    // Apply substitutions to the parsed expressions
+    const substitutedFrom = this.applySubstitutionToExpression(fromExpr, substitution);
+    const substitutedTo = this.applySubstitutionToExpression(toExpr, substitution);
+    
+    // Convert back to strings with proper parentheses
+    const fromStr = this.expressionToString(substitutedFrom);
+    const toStr = this.expressionToString(substitutedTo);
     
     if (direction === 'left-to-right') {
-      return `${substitutedFrom} → ${substitutedTo}`;
+      return `${fromStr} → ${toStr}`;
     } else {
-      return `${substitutedFrom} → ${substitutedTo}`;
+      return `${fromStr} → ${toStr}`;
     }
+  }
+
+  // New method to generate full expression preview
+  generateFullExpressionPreview(
+    originalExpression: BooleanExpression,
+    rule: TransformationRule,
+    direction: 'left-to-right' | 'right-to-left',
+    position: number[],
+    substitution: Map<string, BooleanExpression>
+  ): string {
+    if (position.length === 0) {
+      // Rule applies to the entire expression
+      if (direction === 'left-to-right') {
+        const toPattern = parseBooleanExpression(rule.rightPattern);
+        return this.applySubstitutionToString(toPattern, substitution);
+      } else {
+        const toPattern = parseBooleanExpression(rule.leftPattern);
+        return this.applySubstitutionToString(toPattern, substitution);
+      }
+    } else {
+      // Rule applies to a subexpression - show the full transformed expression
+      const transformedExpr = this.replaceSubexpressionAtPosition(
+        originalExpression,
+        position,
+        rule,
+        direction,
+        substitution
+      );
+      return this.expressionToString(transformedExpr);
+    }
+  }
+
+  private applySubstitutionToString(pattern: BooleanExpression, substitution: Map<string, BooleanExpression>): string {
+    // Apply substitution to a parsed pattern and return as string
+    const substituted = this.applySubstitutionToExpression(pattern, substitution);
+    return this.expressionToString(substituted);
+  }
+
+  private applySubstitutionToExpression(
+    expr: BooleanExpression, 
+    substitution: Map<string, BooleanExpression>
+  ): BooleanExpression {
+    switch (expr.type) {
+      case 'variable':
+        return substitution.get(expr.value) || expr;
+      case 'constant':
+        return expr;
+      case 'unary':
+        return {
+          type: 'unary',
+          operator: expr.operator,
+          operand: this.applySubstitutionToExpression(expr.operand, substitution)
+        };
+      case 'binary':
+        return {
+          type: 'binary',
+          operator: expr.operator,
+          left: this.applySubstitutionToExpression(expr.left, substitution),
+          right: this.applySubstitutionToExpression(expr.right, substitution)
+        };
+    }
+  }
+
+  private replaceSubexpressionAtPosition(
+    expression: BooleanExpression,
+    position: number[],
+    rule: TransformationRule,
+    direction: 'left-to-right' | 'right-to-left',
+    substitution: Map<string, BooleanExpression>
+  ): BooleanExpression {
+    if (position.length === 0) {
+      // Apply to the entire expression
+      if (direction === 'left-to-right') {
+        const toPattern = parseBooleanExpression(rule.rightPattern);
+        return this.applySubstitutionToExpression(toPattern, substitution);
+      } else {
+        const toPattern = parseBooleanExpression(rule.leftPattern);
+        return this.applySubstitutionToExpression(toPattern, substitution);
+      }
+    }
+
+    // Navigate to the subexpression position
+    const currentPos = position[0];
+    const remainingPos = position.slice(1);
+
+    if (expression.type === 'unary') {
+      if (currentPos === 0) {
+        return {
+          type: 'unary',
+          operator: expression.operator,
+          operand: this.replaceSubexpressionAtPosition(
+            expression.operand,
+            remainingPos,
+            rule,
+            direction,
+            substitution
+          )
+        };
+      }
+    } else if (expression.type === 'binary') {
+      if (currentPos === 0) {
+        return {
+          type: 'binary',
+          operator: expression.operator,
+          left: this.replaceSubexpressionAtPosition(
+            expression.left,
+            remainingPos,
+            rule,
+            direction,
+            substitution
+          ),
+          right: expression.right
+        };
+      } else if (currentPos === 1) {
+        return {
+          type: 'binary',
+          operator: expression.operator,
+          left: expression.left,
+          right: this.replaceSubexpressionAtPosition(
+            expression.right,
+            remainingPos,
+            rule,
+            direction,
+            substitution
+          )
+        };
+      }
+    }
+
+    return expression;
   }
 
   private expressionToString(expr: BooleanExpression): string {
@@ -425,17 +606,24 @@ export class RuleEngine {
         return expr.value;
       case 'constant':
         return expr.value;
-      case 'unary':
-        return `¬${this.expressionToString(expr.operand)}`;
+      case 'unary': {
+        // For unary expressions, we need to check if the operand needs parentheses
+        const operandStr = this.expressionToString(expr.operand);
+        if (expr.operand.type === 'binary') {
+          // Binary operands of unary operators need parentheses
+          return `¬(${operandStr})`;
+        } else {
+          // Variables, constants, and unary operands don't need parentheses
+          return `¬${operandStr}`;
+        }
+      }
       case 'binary': {
         const leftStr = this.expressionToString(expr.left);
         const rightStr = this.expressionToString(expr.right);
         
-        // Add parentheses for proper precedence
-        const leftNeedsParens = expr.left.type === 'binary' && 
-          this.getOperatorPrecedence(expr.left.operator) < this.getOperatorPrecedence(expr.operator);
-        const rightNeedsParens = expr.right.type === 'binary' && 
-          this.getOperatorPrecedence(expr.right.operator) < this.getOperatorPrecedence(expr.operator);
+        // Check if subexpressions need parentheses based on operator precedence
+        const leftNeedsParens = this.needsParentheses(expr.left);
+        const rightNeedsParens = this.needsParentheses(expr.right);
         
         const leftFormatted = leftNeedsParens ? `(${leftStr})` : leftStr;
         const rightFormatted = rightNeedsParens ? `(${rightStr})` : rightStr;
@@ -445,14 +633,29 @@ export class RuleEngine {
     }
   }
 
-  private getOperatorPrecedence(operator: string): number {
-    switch (operator) {
-      case '¬': return 3;
-      case '∧': return 2;
-      case '∨': return 1;
-      case '→': return 0;
-      default: return 0;
+  private needsParentheses(subexpr: BooleanExpression): boolean {
+    if (subexpr.type === 'variable' || subexpr.type === 'constant') {
+      return false; // Variables and constants never need parentheses
     }
+    
+    if (subexpr.type === 'unary') {
+      // Unary expressions (like ¬a) have higher precedence than binary operators
+      // So they don't need parentheses unless they're complex
+      if (subexpr.operand.type === 'binary') {
+        // If the operand is binary, we need parentheses: ¬(a ∧ b)
+        return true;
+      }
+      return false; // ¬a doesn't need parentheses
+    }
+    
+    if (subexpr.type === 'binary') {
+      // Always add parentheses around binary subexpressions when they're operands
+      // This ensures clarity and prevents ambiguity
+      // For example: a ∧ (b ∨ c) instead of a ∧ b ∨ c
+      return true;
+    }
+    
+    return false;
   }
 
   private findAllMatches(expression: BooleanExpression, pattern: BooleanExpression): Array<{ substitution: Map<string, BooleanExpression>, path: number[] }> {
@@ -464,7 +667,7 @@ export class RuleEngine {
       matches.push({ substitution: fullMatch, path: [] });
     }
 
-    // Check all subexpressions
+    // Find all subexpression matches (excluding the root)
     this.findAllSubexpressionMatches(expression, pattern, [], matches);
     
     return matches;
@@ -476,28 +679,37 @@ export class RuleEngine {
     path: number[], 
     matches: Array<{ substitution: Map<string, BooleanExpression>, path: number[] }>
   ) {
-    if (expression.type === 'unary') {
-      // Check if this subexpression matches
-      const substitution = this.unify(expression, pattern);
-      if (substitution) {
-        matches.push({ substitution, path });
+    // Only check subexpressions, not the root expression
+    if (path.length === 0) {
+      // Skip root - it was already checked in findAllMatches
+      // Continue searching deeper based on expression type
+      if (expression.type === 'unary') {
+        // Search in the operand
+        this.findAllSubexpressionMatches(expression.operand, pattern, [...path, 0], matches);
+      } else if (expression.type === 'binary') {
+        // Search in both left and right subtrees
+        this.findAllSubexpressionMatches(expression.left, pattern, [...path, 0], matches);
+        this.findAllSubexpressionMatches(expression.right, pattern, [...path, 1], matches);
       }
-      
-      // Continue searching deeper
-      this.findAllSubexpressionMatches(expression.operand, pattern, [...path, 0], matches);
+      return;
     }
-    
-    if (expression.type === 'binary') {
-      // Check if this subexpression matches
-      const substitution = this.unify(expression, pattern);
-      if (substitution) {
-        matches.push({ substitution, path });
-      }
-      
-      // Continue searching in left and right subtrees
+
+    // Check if this subexpression matches the pattern
+    const substitution = this.unify(expression, pattern);
+    if (substitution) {
+      matches.push({ substitution, path });
+    }
+
+    // Continue searching deeper based on expression type
+    if (expression.type === 'unary') {
+      // Search in the operand
+      this.findAllSubexpressionMatches(expression.operand, pattern, [...path, 0], matches);
+    } else if (expression.type === 'binary') {
+      // Search in both left and right subtrees
       this.findAllSubexpressionMatches(expression.left, pattern, [...path, 0], matches);
       this.findAllSubexpressionMatches(expression.right, pattern, [...path, 1], matches);
     }
+    // For variables and constants, no deeper search needed
   }
 
   private canApplyRule(expression: BooleanExpression, rule: TransformationRule): boolean {
@@ -565,65 +777,63 @@ export class RuleEngine {
   }
 
   private unify(expression: BooleanExpression, pattern: BooleanExpression): Map<string, BooleanExpression> | null {
-    const substitution = new Map<string, BooleanExpression>();
-    return this.unifyRecursive(expression, pattern, substitution);
+    return this.unifyRecursive(expression, pattern, new Map());
   }
 
   private unifyRecursive(expression: BooleanExpression, pattern: BooleanExpression, substitution: Map<string, BooleanExpression>): Map<string, BooleanExpression> | null {
-    // Pattern variables can match any expression type
+    // If pattern is a variable, check if we can bind it
     if (pattern.type === 'variable') {
-      const patternVar = pattern.value;
-      const existingMapping = substitution.get(patternVar);
+      const existingBinding = substitution.get(pattern.value);
       
-      if (existingMapping) {
-        // Variable already mapped, check consistency
-        if (this.expressionsEqual(existingMapping, expression)) {
+      if (existingBinding) {
+        // Variable already bound - check consistency
+        if (this.expressionsEqual(existingBinding, expression)) {
           return substitution;
+        } else {
+          return null; // Inconsistent binding
         }
-        return null;
       } else {
-        // New variable mapping - pattern variables can match any expression
-        substitution.set(patternVar, expression);
+        // New variable binding - pattern variables can match any expression
+        const newSubstitution = new Map(substitution);
+        newSubstitution.set(pattern.value, expression);
+        return newSubstitution;
+      }
+    }
+
+    // If pattern is a constant, expression must match exactly
+    if (pattern.type === 'constant') {
+      if (expression.type === 'constant' && expression.value === pattern.value) {
         return substitution;
+      } else {
+        return null;
       }
     }
 
-    // For non-variable patterns, types must match
-    if (expression.type !== pattern.type) {
-      return null;
-    }
-
-    switch (pattern.type) {
-      case 'constant':
-        if (expression.type === 'constant' && expression.value === pattern.value) {
-          return substitution;
-        }
-        return null;
-
-      case 'unary': {
-        if (expression.type !== 'unary' || expression.operator !== pattern.operator) {
-          return null;
-        }
+    // If pattern is unary, expression must be unary with same operator
+    if (pattern.type === 'unary') {
+      if (expression.type === 'unary' && expression.operator === pattern.operator) {
         return this.unifyRecursive(expression.operand, pattern.operand, substitution);
-      }
-
-      case 'binary': {
-        if (expression.type !== 'binary' || expression.operator !== pattern.operator) {
-          return null;
-        }
-        
-        const leftSubstitution = this.unifyRecursive(expression.left, pattern.left, substitution);
-        if (leftSubstitution === null) {
-          return null;
-        }
-        
-        return this.unifyRecursive(expression.right, pattern.right, leftSubstitution);
-      }
-
-      default:
+      } else {
         return null;
+      }
     }
+
+    // If pattern is binary, expression must be binary with same operator
+    if (pattern.type === 'binary') {
+      if (expression.type === 'binary' && expression.operator === pattern.operator) {
+        const leftResult = this.unifyRecursive(expression.left, pattern.left, substitution);
+        if (leftResult === null) return null;
+        
+        return this.unifyRecursive(expression.right, pattern.right, leftResult);
+      } else {
+        return null;
+      }
+    }
+
+    return null;
   }
+
+
 
   private expressionsEqual(expr1: BooleanExpression, expr2: BooleanExpression): boolean {
     if (expr1.type !== expr2.type) {
@@ -669,7 +879,7 @@ export class RuleEngine {
       }
 
       // Apply the substitution to the replacement
-      const substitutedReplacement = this.applySubstitution(replacement, matchInfo.substitution);
+      const substitutedReplacement = this.applySubstitutionToExpression(replacement, matchInfo.substitution);
       
       // Replace the matched part with the substituted replacement
       return this.replaceSubexpression(expression, matchInfo.path, substitutedReplacement);
@@ -752,37 +962,6 @@ export class RuleEngine {
     return expression;
   }
 
-  private applySubstitution(expression: BooleanExpression, substitution: Map<string, BooleanExpression>): BooleanExpression {
-    switch (expression.type) {
-      case 'constant':
-        return expression;
-      
-      case 'variable': {
-        const replacement = substitution.get(expression.value);
-        if (replacement) {
-          return replacement;
-        }
-        return expression;
-      }
-      
-      case 'unary':
-        return {
-          ...expression,
-          operand: this.applySubstitution(expression.operand, substitution)
-        };
-      
-      case 'binary':
-        return {
-          ...expression,
-          left: this.applySubstitution(expression.left, substitution),
-          right: this.applySubstitution(expression.right, substitution)
-        };
-      
-      default:
-        return expression;
-    }
-  }
-
   // Method to introduce new variables (for rules like T = φ ∨ ¬φ)
   introduceVariable(expression: BooleanExpression): BooleanExpression {
     // This would be used when applying rules that introduce new variables
@@ -791,3 +970,4 @@ export class RuleEngine {
     return expression;
   }
 }
+
