@@ -232,7 +232,17 @@ export class RuleEngine {
     this.rules.push({
       id: 'identity-and-top',
       name: 'Identity for AND with Top',
-      description: '𝜑 ∧ ⊤ ≡ 𝜑 ≡ ⊤ ∧ 𝜑',
+      description: '𝜑 ∧ ⊤ ≡ 𝜑',
+      category: 'identity',
+      leftPattern: 'A ∧ true',
+      rightPattern: 'A',
+      variables: ['A']
+    });
+
+    this.rules.push({
+      id: 'identity-and-top-2',
+      name: 'Identity for AND with Top',
+      description: '⊤ ∧ 𝜑 ≡ 𝜑',
       category: 'identity',
       leftPattern: 'A ∧ true',
       rightPattern: 'A',
@@ -242,7 +252,17 @@ export class RuleEngine {
     this.rules.push({
       id: 'identity-or-bottom',
       name: 'Identity for OR with Bottom',
-      description: '𝜑 ∨ ⊥ ≡ 𝜑 ≡ ⊥ ∨ 𝜑',
+      description: '𝜑 ∨ ⊥ ≡ 𝜑',
+      category: 'identity',
+      leftPattern: 'A ∨ false',
+      rightPattern: 'A',
+      variables: ['A']
+    });
+
+    this.rules.push({
+      id: 'identity-or-bottom-2',
+      name: 'Identity for OR with Bottom',
+      description: '⊥ ∨ 𝜑 ≡ 𝜑',
       category: 'identity',
       leftPattern: 'A ∨ false',
       rightPattern: 'A',
@@ -283,7 +303,7 @@ export class RuleEngine {
     this.rules.push({
       id: 'domination-or-top',
       name: 'Domination for OR with Top',
-      description: '𝜑 ∨ ⊤ ≡ ⊤ ≡ ⊤ ∨ 𝜑',
+      description: '𝜑 ∨ ⊤ ≡ ⊤',
       category: 'domination',
       leftPattern: 'A ∨ true',
       rightPattern: 'true',
