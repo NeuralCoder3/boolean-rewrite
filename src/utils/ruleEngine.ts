@@ -263,9 +263,19 @@ export class RuleEngine {
     this.rules.push({
       id: 'domination-and-bottom',
       name: 'Domination for AND with Bottom',
-      description: '𝜑 ∧ ⊥ ≡ ⊥ ≡ ⊥ ∧ 𝜑',
+      description: '𝜑 ∧ ⊥ ≡ ⊥',
       category: 'domination',
       leftPattern: 'A ∧ false',
+      rightPattern: 'false',
+      variables: ['A']
+    });
+
+    this.rules.push({
+      id: 'domination-and-bottom-2',
+      name: 'Domination for AND with Bottom',
+      description: '⊥ ∧ 𝜑 ≡ ⊥',
+      category: 'domination',
+      leftPattern: 'false ∧ A',
       rightPattern: 'false',
       variables: ['A']
     });
@@ -276,6 +286,16 @@ export class RuleEngine {
       description: '𝜑 ∨ ⊤ ≡ ⊤ ≡ ⊤ ∨ 𝜑',
       category: 'domination',
       leftPattern: 'A ∨ true',
+      rightPattern: 'true',
+      variables: ['A']
+    });
+
+    this.rules.push({
+      id: 'domination-or-top-2',
+      name: 'Domination for OR with Top',
+      description: '⊤ ∨ 𝜑 ≡ ⊤',
+      category: 'domination',
+      leftPattern: 'true ∨ A',
       rightPattern: 'true',
       variables: ['A']
     });
