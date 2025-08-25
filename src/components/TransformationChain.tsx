@@ -22,13 +22,13 @@ export const TransformationChain: React.FC<TransformationChainProps> = ({
 
   return (
     <div className="w-full max-w-5xl mx-auto">
-      <h3 className="text-2xl font-semibold text-gray-900 text-center mb-8">
+      <h3 className="text-2xl font-semibold text-gray-600 dark:text-gray-300 text-center mb-8">
         Transformation Chain
       </h3>
       
       {/* Initial Expression */}
       <div className="text-center mb-8">
-        <div className="text-lg text-gray-500 mb-3">Initial Expression:</div>
+        <div className="text-lg text-gray-500 dark:text-gray-400 mb-3">Initial Expression:</div>
         <div className="font-mono text-2xl bg-blue-50 px-6 py-4 rounded-lg border-2 border-blue-200 inline-block">
           {renderExpression(currentExpression)}
         </div>
@@ -66,7 +66,7 @@ export const TransformationChain: React.FC<TransformationChainProps> = ({
 
       {/* Current Expression */}
       <div className="text-center pt-8 border-t-2 border-gray-200 mt-8">
-        <div className="text-lg text-gray-500 mb-3">Current Expression:</div>
+        <div className="text-lg text-gray-500 dark:text-gray-400 mb-3">Current Expression:</div>
         <div className="font-mono text-2xl bg-green-50 px-6 py-4 rounded-lg border-2 border-green-200 inline-block">
           {renderExpression(currentExpression)}
         </div>

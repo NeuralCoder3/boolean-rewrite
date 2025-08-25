@@ -178,12 +178,8 @@ function App() {
                 className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600 text-white font-semibold rounded-xl transition-all duration-200 flex items-center space-x-3 text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 <span className="text-2xl">≡</span>
-                <span>Add Transformation</span>
+                <span>Rewrite</span>
               </button>
-            </div>
-            
-            <div className="mt-6 text-lg text-gray-600 dark:text-gray-300 transition-colors duration-200">
-              Click the ≡ button to apply a transformation rule
             </div>
             
             <div className="mt-4 flex gap-3 justify-center">
