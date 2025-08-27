@@ -30,7 +30,7 @@ export const TransformationChain: React.FC<TransformationChainProps> = ({
       <div className="text-center mb-8">
         <div className="text-lg text-gray-500 dark:text-gray-400 mb-3">Initial Expression:</div>
         <div className="font-mono text-2xl bg-blue-50 px-6 py-4 rounded-lg border-2 border-blue-200 inline-block">
-          {renderExpression(currentExpression)}
+          {renderExpression(steps[0].from)}
         </div>
       </div>
 
