@@ -105,7 +105,7 @@ export const ExpressionInput: React.FC<ExpressionInputProps> = ({
               </div>
             </div>
             <p className="mt-4 text-gray-600 dark:text-gray-300">Use parentheses for grouping: <code className="text-gray-800 dark:text-gray-200 bg-white/60 dark:bg-gray-600/60 px-2 py-1 rounded">(A /\ B) \/ C</code></p>
-            <p className="mt-2 text-gray-600 dark:text-gray-300">Examples: <code className="text-gray-800 dark:text-gray-200 bg-white/60 dark:bg-gray-600/60 px-2 py-1 rounded">abc /\ (x -&gt; def)</code>, <code className="text-gray-800 dark:text-gray-200 bg-white/60 dark:bg-gray-600/60 px-2 py-1 rounded">true -&gt; A</code>, <code className="text-gray-800 dark:text-gray-200 bg-white/60 dark:bg-gray-600/60 px-2 py-1 rounded">!A \/ B</code></p>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">Examples: <code className="text-gray-800 dark:text-gray-200 bg-white/60 dark:bg-gray-600/60 px-2 py-1 rounded">a /\ (b \/ !a)</code></p>
           </div>
         </div>
       </form>

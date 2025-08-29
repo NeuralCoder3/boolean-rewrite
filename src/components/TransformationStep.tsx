@@ -3,11 +3,13 @@ import type { TransformationStep as TransformationStepType } from '../types/bool
 import { renderExpression } from '../utils/expressionRenderer';
 
 interface TransformationStepProps {
+  index: number;
   step: TransformationStepType;
   onRuleClick?: () => void;
 }
 
 export const TransformationStep: React.FC<TransformationStepProps> = ({ 
+  index,
   step, 
   onRuleClick 
 }) => {
@@ -15,10 +17,15 @@ export const TransformationStep: React.FC<TransformationStepProps> = ({
     <div className="flex items-center space-x-6 p-6 bg-gray-50 rounded-lg">
       {/* From Expression */}
       <div className="flex-1">
-        <div className="text-lg text-gray-500 mb-2 text-center">From:</div>
-        <div className="font-mono text-xl bg-white px-4 py-3 rounded border text-center">
-          {renderExpression(step.from)}
-        </div>
+        {
+          index === 0 && (
+            <>
+            <div className="text-lg text-gray-500 mb-2 text-center">From:</div>
+            <div className="font-mono text-xl bg-white px-4 py-3 rounded border text-center">
+              {renderExpression(step.from)}
+            </div>
+            </>)
+        }
       </div>
 
       {/* Equivalence Symbol with Rule Name */}

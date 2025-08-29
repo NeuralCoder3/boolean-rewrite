@@ -44,6 +44,7 @@ export const TransformationChain: React.FC<TransformationChainProps> = ({
             </div>
             
             <TransformationStep 
+              index={index}
               step={step} 
               onRuleClick={() => onRuleClick?.(step.rule)}
             />
